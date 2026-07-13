@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP Fleet Surveillance — PHE ONWJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0A1018; --bg2:#0D1521; --panel:#111C29; --panel2:#0F1926;
+  --border:#213244; --border2:#2C3F54;
+  --ink:#E8EEF4; --muted:#7F92A8; --dim:#556579;
+  --amber:#F5B841; --cyan:#38D6C5; --blue:#4FA8F5;
+  --red:#F26D5B; --green:#54D98C; --violet:#A996F2;
+  --grid:rgba(56,214,197,.07);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(56,214,197,.06), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(79,168,245,.05), transparent 55%),
+    var(--bg);
+  color:var(--ink);font-family:'Inter',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.5;
+}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 20px 60px}
+
+/* ---- header ---- */
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;
+  border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:24px}
+.brand{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--cyan);display:flex;align-items:center;gap:9px}
+.eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 3px rgba(84,217,140,.18);animation:pulse 2.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(24px,3.4vw,34px);
+  margin:0;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:13px;max-width:52ch}
+.meta{text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);
+  line-height:1.9;white-space:nowrap}
+.meta b{color:var(--ink);font-weight:500}
+
+/* ---- kpi strip ---- */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:26px}
+.kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+  border-radius:12px;padding:16px 16px 14px;position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan);opacity:.8}
+.kpi.warn::after{background:var(--amber)}
+.kpi.crit::after{background:var(--red)}
+.kpi .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted)}
+.kpi .val{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:30px;
+  line-height:1.05;margin-top:8px;letter-spacing:-.02em}
+.kpi .unit{font-size:13px;color:var(--dim);font-weight:500;margin-left:3px}
+.kpi .foot{font-size:11px;color:var(--dim);margin-top:4px}
+
+/* ---- panels ---- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+  border-radius:14px;padding:18px 20px}
+.phead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.ptitle{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;letter-spacing:-.01em}
+.ptag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+.chartbox{position:relative;height:250px}
+
+/* ---- attention ---- */
+.alerts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.alert{border:1px solid var(--border2);border-radius:10px;padding:11px 13px;background:var(--bg2);
+  display:flex;flex-direction:column;gap:3px}
+.alert .w{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px}
+.alert .r{font-size:12px;color:var(--muted)}
+.alert .tag{align-self:flex-start;margin-top:4px;font-size:10px;font-family:'JetBrains Mono',monospace;
+  padding:2px 7px;border-radius:5px;letter-spacing:.05em;text-transform:uppercase}
+
+/* ---- table ---- */
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;
+  padding:9px 13px;color:var(--ink);font-family:'Inter';font-size:13px}
+.search:focus{outline:none;border-color:var(--cyan)}
+.chip{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg2);border:1px solid var(--border);
+  color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer;letter-spacing:.04em;transition:.15s}
+.chip:hover{border-color:var(--border2);color:var(--ink)}
+.chip.on{background:rgba(56,214,197,.12);border-color:var(--cyan);color:var(--cyan)}
+.tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
+thead th{background:var(--bg2);text-align:left;font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:11px 14px;font-weight:500;
+  border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+thead th:hover{color:var(--ink)}
+tbody td{padding:11px 14px;border-bottom:1px solid rgba(33,50,68,.55);white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(56,214,197,.04)}
+.well{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--ink)}
+.num{font-family:'JetBrains Mono',monospace;text-align:right;color:var(--ink)}
+.led{display:inline-flex;align-items:center;gap:7px;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.dot.ok{background:var(--green);box-shadow:0 0 6px rgba(84,217,140,.6)}
+.dot.warn{background:var(--amber);box-shadow:0 0 6px rgba(245,184,65,.6)}
+.dot.crit{background:var(--red);box-shadow:0 0 6px rgba(242,109,91,.6)}
+.dot.idle{background:var(--dim)}
+.pill{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:5px;
+  background:rgba(79,168,245,.1);color:var(--blue);border:1px solid rgba(79,168,245,.2)}
+.pill.tba{background:rgba(127,146,168,.1);color:var(--muted);border-color:rgba(127,146,168,.2)}
+/* run life bar */
+.rl{display:flex;align-items:center;gap:9px;justify-content:flex-end}
+.rlbar{width:70px;height:6px;border-radius:3px;background:var(--border);overflow:hidden;flex:none}
+.rlbar i{display:block;height:100%;border-radius:3px}
+.muted{color:var(--dim)}
+.empty{padding:30px;text-align:center;color:var(--dim);font-size:13px}
+
+/* ---- pulled ---- */
+.pulled-tag{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--violet);
+  border:1px solid rgba(169,150,242,.3);background:rgba(169,150,242,.08);padding:2px 7px;border-radius:5px}
+
+footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)}
+footer a{color:var(--cyan);text-decoration:none}
+
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+@media(max-width:520px){.kpis{grid-template-columns:1fr 1fr}.meta{text-align:left}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow">SLB ALSC · Surveillance Console</div>
+      <h1>ESP Fleet Surveillance — PHE ONWJ</h1>
+      <div class="sub">Pemantauan armada Electric Submersible Pump di lapangan offshore North West Java. Ringkasan status, run life, distribusi tipe pompa, dan sumur yang butuh perhatian.</div>
+    </div>
+    <div class="meta">
+      OPERATOR&nbsp;&nbsp;<b>PHE ONWJ</b><br>
+      SOURCE&nbsp;&nbsp;&nbsp;&nbsp;<b>ESP Mapping</b><br>
+      SNAPSHOT&nbsp;&nbsp;<b id="snap">—</b>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="phead"><div class="ptitle">Distribusi Tipe Pompa</div><div class="ptag">active fleet</div></div>
+      <div class="chartbox"><canvas id="pumpChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><div class="ptitle">Sebaran Run Life</div><div class="ptag">days · active</div></div>
+      <div class="chartbox"><canvas id="rlChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px">
+    <div class="phead">
+      <div class="ptitle">Butuh Perhatian</div>
+      <div class="ptag" id="alertCount">—</div>
+    </div>
+    <div class="alerts" id="alerts"></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px">
+    <div class="phead"><div class="ptitle">Daftar Sumur — Active Fleet</div><div class="ptag" id="rowCount">—</div></div>
+    <div class="controls">
+      <input class="search" id="search" placeholder="Cari sumur, tipe pompa, remarks…">
+      <button class="chip on" data-f="all">Semua</button>
+      <button class="chip" data-f="attention">Perhatian</button>
+      <button class="chip" data-f="production">Ada Produksi</button>
+      <button class="chip" data-f="tba">TBA/Unknown</button>
+    </div>
+    <div class="tblwrap">
+      <table id="tbl">
+        <thead><tr>
+          <th data-k="well">Well</th>
+          <th data-k="run_status">Status</th>
+          <th data-k="pump_family">Tipe Pompa</th>
+          <th data-k="install">Install</th>
+          <th data-k="run_life" class="num">Run Life</th>
+          <th data-k="oil" class="num">Oil</th>
+          <th data-k="water" class="num">Water</th>
+          <th data-k="fluid" class="num">Fluid</th>
+          <th data-k="pintake" class="num">Pintake</th>
+          <th data-k="remarks">Remarks</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="phead"><div class="ptitle">Pulled / Historical Records</div><div class="ptag" id="pulledCount">—</div></div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th>Well</th><th>Tipe Pompa</th><th>Install</th><th>Pulled</th><th class="num">Run Life</th>
+        </tr></thead>
+        <tbody id="pulledBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    <div>ssolihin99@gmail.com · ESP Fleet Console</div>
+    <div>Dibangun untuk <a href="#">SLB ALSC</a> · data snapshot lokal</div>
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+const A = ESP_DATA.active, P = ESP_DATA.pulled;
+const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
+const C = getComputedStyle(document.documentElement);
+const col = n => C.getPropertyValue(n).trim();
+
+// --- snapshot date (max run_life => today reference is embedded; use file gen date) ---
+document.getElementById('snap').textContent = '2026-07-13';
+
+// --- classify severity from remarks ---
+function severity(r){
+  if(!r) return {cls:'ok',label:''};
+  const s=r.toLowerCase();
+  if(s.includes('loss comm')||s.includes('n/a')||s.includes('trip')) return {cls:'crit',label:r};
+  return {cls:'warn',label:r};
+}
+function remarkColor(r){
+  const s=(r||'').toLowerCase();
+  if(s.includes('loss comm')) return col('--red');
+  if(s.includes('gl mode')) return col('--amber');
+  if(s.includes('gassy')) return col('--amber');
+  return col('--violet');
+}
+
+// --- KPI STRIP ---
+const withProd = A.filter(w=>w.fluid!=null);
+const totFluid = A.reduce((s,w)=>s+(w.fluid||0),0);
+const totOil = A.reduce((s,w)=>s+(w.oil||0),0);
+const rls = A.map(w=>w.run_life).filter(Boolean);
+const avgRL = Math.round(rls.reduce((a,b)=>a+b,0)/rls.length);
+const attn = A.filter(w=>w.remarks);
+const kpis=[
+  {lbl:'Total Sumur Aktif',val:A.length,unit:'',foot:P.length+' pulled/historical'},
+  {lbl:'Avg Run Life',val:fmt(avgRL),unit:'hari',foot:'max '+fmt(Math.max(...rls))+' hari'},
+  {lbl:'Total Fluid',val:fmt(totFluid),unit:'bfpd',foot:fmt(totOil)+' bopd oil',cls:''},
+  {lbl:'Data Produksi',val:withProd.length+'/'+A.length,unit:'',foot:'sumur ada well test'},
+  {lbl:'Butuh Perhatian',val:attn.length,unit:'',foot:'ada remarks/anomali',cls:'warn'},
+];
+document.getElementById('kpis').innerHTML = kpis.map(k=>`
+  <div class="kpi ${k.cls||''}">
+    <div class="lbl">${k.lbl}</div>
+    <div class="val">${k.val}<span class="unit">${k.unit}</span></div>
+    <div class="foot">${k.foot}</div>
+  </div>`).join('');
+
+// --- ALERTS ---
+const alertColors={crit:col('--red'),warn:col('--amber')};
+document.getElementById('alertCount').textContent = attn.length+' well';
+document.getElementById('alerts').innerHTML = attn.map(w=>{
+  const sv=severity(w.remarks);const c=alertColors[sv.cls]||col('--violet');
+  return `<div class="alert" style="border-color:${c}44">
+    <div class="w" style="color:${c}">${w.well}</div>
+    <div class="r">${w.pump_family}</div>
+    <span class="tag" style="background:${c}1a;color:${c}">${w.remarks}</span>
+  </div>`;
+}).join('');
+
+// --- CHART: pump family doughnut ---
+const fam={};
+A.forEach(w=>{fam[w.pump_family]=(fam[w.pump_family]||0)+1});
+const famEntries=Object.entries(fam).sort((a,b)=>b[1]-a[1]);
+const palette=[col('--cyan'),col('--blue'),col('--amber'),col('--green'),col('--violet'),col('--red'),'#6C7A91','#3B5168'];
+new Chart(document.getElementById('pumpChart'),{
+  type:'doughnut',
+  data:{labels:famEntries.map(e=>e[0]),datasets:[{data:famEntries.map(e=>e[1]),
+    backgroundColor:palette,borderColor:col('--panel'),borderWidth:2}]},
+  options:{cutout:'62%',plugins:{legend:{position:'right',
+    labels:{color:col('--muted'),font:{family:'JetBrains Mono',size:11},boxWidth:10,padding:9}}}}
+});
+
+// --- CHART: run life histogram ---
+const bins=[0,500,1000,1500,2000,3000,4000,7000];
+const labels=['<500','500-1k','1-1.5k','1.5-2k','2-3k','3-4k','4k+'];
+const counts=new Array(labels.length).fill(0);
+rls.forEach(v=>{for(let i=0;i<bins.length-1;i++){if(v>=bins[i]&&v<bins[i+1]){counts[i]++;break}}});
+new Chart(document.getElementById('rlChart'),{
+  type:'bar',
+  data:{labels,datasets:[{data:counts,backgroundColor:col('--cyan')+'cc',
+    borderRadius:5,borderSkipped:false,maxBarThickness:44}]},
+  options:{plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:col('--muted'),font:{family:'JetBrains Mono',size:10}}},
+      y:{grid:{color:col('--grid')},ticks:{color:col('--muted'),precision:0,font:{family:'JetBrains Mono',size:10}},beginAtZero:true}
+    }}
+});
+
+// --- TABLE ---
+const maxRL=Math.max(...rls);
+let state={filter:'all',q:'',sort:'well',dir:1};
+function rlColor(v){if(v==null)return col('--dim');if(v<365)return col('--red');if(v<1000)return col('--amber');return col('--green')}
+function statusDot(w){
+  if(w.remarks){const s=w.remarks.toLowerCase();
+    if(s.includes('loss comm')||s.includes('n/a'))return'crit';return'warn';}
+  return w.run_life!=null?'ok':'idle';
+}
+function passFilter(w){
+  if(state.filter==='attention'&&!w.remarks)return false;
+  if(state.filter==='production'&&w.fluid==null)return false;
+  if(state.filter==='tba'&&w.pump_family!=='TBA/Unknown')return false;
+  if(state.q){const blob=(w.well+' '+w.pump_family+' '+(w.remarks||'')+' '+(w.run_status||'')).toLowerCase();
+    if(!blob.includes(state.q))return false;}
+  return true;
+}
+function render(){
+  let rows=A.filter(passFilter);
+  const k=state.sort;
+  rows.sort((a,b)=>{let x=a[k],y=b[k];
+    if(x==null)return 1;if(y==null)return -1;
+    if(typeof x==='string')return x.localeCompare(y)*state.dir;
+    return (x-y)*state.dir;});
+  const tb=document.getElementById('tbody');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="10" class="empty">Tidak ada sumur yang cocok dengan filter.</td></tr>';}
+  else tb.innerHTML=rows.map(w=>{
+    const d=statusDot(w),rlc=rlColor(w.run_life);
+    const pct=w.run_life?Math.min(100,w.run_life/maxRL*100):0;
+    const famCls=w.pump_family==='TBA/Unknown'?'pill tba':'pill';
+    return `<tr>
+      <td><span class="well">${w.well}</span></td>
+      <td><span class="led"><span class="dot ${d}"></span>${w.run_status||'—'}</span></td>
+      <td><span class="${famCls}">${w.pump_family}</span></td>
+      <td class="muted num">${w.install?w.install:'—'}</td>
+      <td class="num"><span class="rl"><span class="rlbar"><i style="width:${pct}%;background:${rlc}"></i></span><span style="color:${rlc}">${fmt(w.run_life)}</span></span></td>
+      <td class="num">${fmt(w.oil)}</td>
+      <td class="num">${fmt(w.water)}</td>
+      <td class="num">${fmt(w.fluid)}</td>
+      <td class="num">${fmt(w.pintake)}</td>
+      <td style="color:${w.remarks?remarkColor(w.remarks):'var(--dim)'}">${w.remarks||'—'}</td>
+    </tr>`;}).join('');
+  document.getElementById('rowCount').textContent=rows.length+' / '+A.length+' well';
+}
+document.getElementById('search').addEventListener('input',e=>{state.q=e.target.value.toLowerCase().trim();render()});
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');state.filter=c.dataset.f;render();}));
+document.querySelectorAll('#tbl thead th').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.k;if(!k)return;
+  if(state.sort===k)state.dir*=-1;else{state.sort=k;state.dir=1;}
+  render();}));
+render();
+
+// --- PULLED TABLE ---
+document.getElementById('pulledCount').textContent=P.length+' record';
+document.getElementById('pulledBody').innerHTML=P.map(w=>`
+  <tr>
+    <td><span class="well">${w.well}</span> <span class="pulled-tag">PULLED</span></td>
+    <td><span class="pill ${w.pump_family==='TBA/Unknown'?'tba':''}">${w.pump_family}</span></td>
+    <td class="muted num">${w.install||'—'}</td>
+    <td class="muted num">${w.pulled||'—'}</td>
+    <td class="num" style="color:${rlColor(w.run_life)}">${fmt(w.run_life)}</td>
+  </tr>`).join('');
+</script>
+</body>
+</html>
